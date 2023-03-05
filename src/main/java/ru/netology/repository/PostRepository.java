@@ -3,41 +3,31 @@ package ru.netology.repository;
 import ru.netology.exception.NotFoundException;
 import ru.netology.model.Post;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class PostRepository {
-  private final List<Post> posts = Collections.synchronizedList(new ArrayList<>());
+  private final Map<Long, Post> posts = new ConcurrentHashMap<>();
 
   private final AtomicLong nextId = new AtomicLong(1);
 
   public List<Post> all() {
-    return this.posts;
-  }
-
-  private Post getPostById(long id) {
-    for (Post post : this.posts) {
-      if (post.getId() == id) {
-        return post;
-      }
-    }
-    return null;
+    return new ArrayList<>(this.posts.values());
   }
 
   public Optional<Post> getById(long id) {
-    Post post = this.getPostById(id);
+    Post post = this.posts.get(id);
     return Optional.ofNullable(post);
   }
 
   public Post save(Post post) throws NotFoundException {
     if (post.getId() == 0) {
-      post.setId(this.nextId.getAndIncrement());
-      this.posts.add(post);
+      long newPostId = this.nextId.getAndIncrement();
+      post.setId(newPostId);
+      this.posts.put(newPostId, post);
     } else {
-      Post existsPost = this.getPostById(post.getId());
+      Post existsPost = this.posts.get(post.getId());
       if (existsPost == null) {
         throw new NotFoundException();
       }
@@ -47,9 +37,6 @@ public class PostRepository {
   }
 
   public void removeById(long id) {
-    Post post = this.getPostById(id);
-    if (post != null) {
-      this.posts.remove(post);
-    }
+    this.posts.remove(id);
   }
 }
